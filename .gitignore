@@ -42,6 +42,7 @@ reports/
 *.csv
 *.json
 !requirements.txt
+!vercel.json
 
 # OS
 .DS_Store
