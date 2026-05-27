@@ -33,8 +33,6 @@ Netsuite Agent/
 │   └── js/app.js            # Web UI frontend logic
 └── README.md                # This file
 ```
-REPLACE
-
 
 ## Setup Instructions
 
@@ -165,8 +163,6 @@ python agent.py --help
 | `--schedule` | Run daily at scheduled time |
 | `--schedule-time` | Time to run (HH:MM format, default: 08:00) |
 | `--quiet` | Suppress progress output |
-REPLACE
-
 
 ## Report Outputs
 
@@ -210,7 +206,7 @@ CUSTOMER ACTIVITY SUMMARY
 Total Customers:      1542
 Active:               890
 At Risk (60-90 days): 234
-Inactive (90+ days):  312
+Inactive (90+ days): 312
 New (no orders):      106
 Churned (no orders, 180+ days): 0
 ----------------------------------------
@@ -305,8 +301,6 @@ docker run -p 5000:5000 --env-file .env netsuite-agent
 - Use a dedicated integration user with minimal required permissions
 - The agent uses HMAC-SHA256 OAuth 1.0a signatures for secure authentication
 - Change the default `FLASK_SECRET_KEY` in production
-REPLACE
-
 
 ## License
 
