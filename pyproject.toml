@@ -1,2 +1,18 @@
+[project]
+name = "netsuite-agent"
+version = "1.0.0"
+description = "NetSuite AI Agent - Customer Activity Monitor"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "cryptography>=41.0.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
+    "schedule>=1.2.0",
+    "flask>=3.0.0",
+    "flask-cors>=4.0.0",
+]
+
 [tool.vercel]
-entrypoint = "web_app.py"
+entrypoint = "web_app:app"
