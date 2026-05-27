@@ -20,6 +20,9 @@ from report_generator import ReportGenerator
 
 load_dotenv()
 
+# Detect serverless environment (Vercel, AWS Lambda, etc.)
+IS_SERVERLESS = bool(os.getenv("VERCEL") or os.getenv("AWS_LAMBDA_FUNCTION_NAME"))
+
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "netsuite-agent-secret-key-change-me")
 CORS(app)
@@ -33,10 +36,21 @@ job_status = {
     "error": None,
 }
 
-REPORTS_DIR = Path(os.getenv("REPORT_OUTPUT_PATH", "./reports"))
-REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+# In serverless environments, only /tmp is writable
+_default_reports = "/tmp/reports" if IS_SERVERLESS else "./reports"
+REPORTS_DIR = Path(os.getenv("REPORT_OUTPUT_PATH", _default_reports))
+try:
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+except (OSError, PermissionError):
+    # Fall back to /tmp if we can't write to the configured path
+    REPORTS_DIR = Path("/tmp/reports")
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-ENV_PATH = find_dotenv() or ".env"
+# In serverless, .env file is not writable; config must come from env vars
+try:
+    ENV_PATH = find_dotenv() or ".env"
+except Exception:
+    ENV_PATH = ".env"
 
 
 def get_env_config() -> Dict[str, str]:
@@ -48,12 +62,12 @@ def get_env_config() -> Dict[str, str]:
         "netsuite_token_id": os.getenv("NETSUITE_TOKEN_ID", ""),
         "netsuite_token_secret": os.getenv("NETSUITE_TOKEN_SECRET", ""),
         "inactive_threshold": os.getenv("INACTIVE_DAYS_THRESHOLD", "90"),
-        "output_path": os.getenv("REPORT_OUTPUT_PATH", "./reports"),
+        "output_path": os.getenv("REPORT_OUTPUT_PATH", str(REPORTS_DIR)),
     }
 
 
 def save_env_config(config: Dict[str, str]) -> None:
-    """Save configuration to .env file."""
+    """Save configuration. In serverless, only updates process env vars."""
     mappings = {
         "netsuite_account_id": "NETSUITE_ACCOUNT_ID",
         "netsuite_consumer_key": "NETSUITE_CONSUMER_KEY",
@@ -65,8 +79,14 @@ def save_env_config(config: Dict[str, str]) -> None:
     }
     for key, env_key in mappings.items():
         if key in config:
-            set_key(ENV_PATH, env_key, config[key])
+            # Always update in-memory env
             os.environ[env_key] = config[key]
+            # Try to persist to .env file (won't work in serverless, that's fine)
+            if not IS_SERVERLESS:
+                try:
+                    set_key(ENV_PATH, env_key, config[key])
+                except Exception:
+                    pass
 
 
 def run_analysis_job(
@@ -189,6 +209,16 @@ def index():
     return render_template("index.html", config=config)
 
 
+@app.route("/api/health", methods=["GET"])
+def health():
+    """Health check endpoint."""
+    return jsonify({
+        "status": "ok",
+        "serverless": IS_SERVERLESS,
+        "reports_dir": str(REPORTS_DIR),
+    })
+
+
 @app.route("/api/config", methods=["GET"])
 def get_config():
     """Get current configuration."""
@@ -206,7 +236,10 @@ def update_config():
     """Update configuration."""
     data = request.get_json() or {}
     save_env_config(data)
-    return jsonify({"success": True, "message": "Configuration saved"})
+    msg = "Configuration saved"
+    if IS_SERVERLESS:
+        msg += " (note: in serverless mode, set credentials as environment variables in your Vercel project settings for persistence)"
+    return jsonify({"success": True, "message": msg})
 
 
 @app.route("/api/test-connection", methods=["POST"])
@@ -246,6 +279,11 @@ def run_analysis():
     status_filter = data.get("status_filter") or None
     export_formats = data.get("export_formats", ["excel", "csv", "json"])
 
+    if IS_SERVERLESS:
+        # In serverless, run synchronously to avoid background-thread issues
+        run_analysis_job(threshold, status_filter, export_formats)
+        return jsonify({"success": True, "message": "Analysis complete"})
+
     # Start background thread
     thread = threading.Thread(
         target=run_analysis_job,
@@ -275,15 +313,19 @@ def get_results():
 def list_reports():
     """List available report files."""
     files = []
-    for f in sorted(REPORTS_DIR.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
-        if f.is_file():
-            stat = f.stat()
-            files.append({
-                "name": f.name,
-                "size": stat.st_size,
-                "modified": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
-                "path": str(f),
-            })
+    try:
+        if REPORTS_DIR.exists():
+            for f in sorted(REPORTS_DIR.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
+                if f.is_file():
+                    stat = f.stat()
+                    files.append({
+                        "name": f.name,
+                        "size": stat.st_size,
+                        "modified": datetime.fromtimestamp(stat.st_mtime, timezone.utc).isoformat(),
+                        "path": str(f),
+                    })
+    except Exception:
+        pass
     return jsonify(files)
 
 
