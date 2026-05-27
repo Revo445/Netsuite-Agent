@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetSuite AI Agent - Customer Activity Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>NetSuite AI Agent</h1>
+            <p class="subtitle">Customer Activity Monitor & Inactive Customer Finder</p>
+        </header>
+
+        <!-- Settings Panel -->
+        <section class="panel" id="settings-panel">
+            <h2>Settings</h2>
+            <div class="settings-grid">
+                <div class="form-group">
+                    <label for="ns-account-id">NetSuite Account ID</label>
+                    <input type="text" id="ns-account-id" placeholder="e.g., 1234567_SB1">
+                </div>
+                <div class="form-group">
+                    <label for="ns-consumer-key">Consumer Key</label>
+                    <input type="text" id="ns-consumer-key" placeholder="Your integration consumer key">
+                </div>
+                <div class="form-group">
+                    <label for="ns-consumer-secret">Consumer Secret</label>
+                    <input type="password" id="ns-consumer-secret" placeholder="Your integration consumer secret">
+                </div>
+                <div class="form-group">
+                    <label for="ns-token-id">Token ID</label>
+                    <input type="text" id="ns-token-id" placeholder="Your access token ID">
+                </div>
+                <div class="form-group">
+                    <label for="ns-token-secret">Token Secret</label>
+                    <input type="password" id="ns-token-secret" placeholder="Your access token secret">
+                </div>
+                <div class="form-group">
+                    <label for="inactive-threshold">Inactive Threshold (days)</label>
+                    <input type="number" id="inactive-threshold" value="90" min="1" max="365">
+                </div>
+                <div class="form-group">
+                    <label for="output-path">Report Output Path</label>
+                    <input type="text" id="output-path" value="./reports">
+                </div>
+            </div>
+            <div class="button-row">
+                <button class="btn btn-secondary" id="btn-test-connection">Test Connection</button>
+                <button class="btn btn-primary" id="btn-save-settings">Save Settings</button>
+            </div>
+            <div id="settings-message" class="message"></div>
+        </section>
+
+        <!-- Run Analysis Panel -->
+        <section class="panel" id="run-panel">
+            <h2>Run Analysis</h2>
+            <div class="run-options">
+                <div class="form-group">
+                    <label for="filter-status">Filter by Status</label>
+                    <select id="filter-status">
+                        <option value="">All Customers</option>
+                        <option value="inactive">Inactive (90+ days)</option>
+                        <option value="at_risk">At Risk (60-90 days)</option>
+                        <option value="active">Active (<60 days)</option>
+                        <option value="new">New (no orders)</option>
+                        <option value="churned">Churned (no orders, 180+ days)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Export Formats</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" id="export-excel" checked> Excel</label>
+                        <label><input type="checkbox" id="export-csv" checked> CSV</label>
+                        <label><input type="checkbox" id="export-json" checked> JSON</label>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-large" id="btn-run-analysis" disabled>
+                <span class="btn-text">Run Analysis</span>
+                <span class="spinner hidden"></span>
+            </button>
+            <div id="run-message" class="message"></div>
+        </section>
+
+        <!-- Progress Panel -->
+        <section class="panel hidden" id="progress-panel">
+            <h2>Progress</h2>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+            </div>
+            <p id="progress-text">Ready</p>
+        </section>
+
+        <!-- Results Panel -->
+        <section class="panel hidden" id="results-panel">
+            <h2>Results</h2>
+            <div id="summary-cards" class="summary-cards"></div>
+            <div class="results-table-container">
+                <table id="results-table" class="results-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Entity ID</th>
+                            <th>Company</th>
+                            <th>Email</th>
+                            <th>Status</th>
+                            <th>Days Since Order</th>
+                            <th>Last Order</th>
+                            <th>Total Orders</th>
+                            <th>Total Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Reports Panel -->
+        <section class="panel" id="reports-panel">
+            <h2>Generated Reports</h2>
+            <div id="reports-list" class="reports-list">
+                <p class="empty-state">No reports generated yet.</p>
+            </div>
+            <button class="btn btn-secondary" id="btn-refresh-reports">Refresh List</button>
+        </section>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
